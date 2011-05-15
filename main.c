@@ -24,6 +24,7 @@ void          xrender_surf_blend(Display *disp, Xrender_Surf *src, Xrender_Surf 
 void populate_from_file(Display *disp, Xrender_Surf *rs, char *file);
 void main_loop(void);
 void setup_window(void);
+void sync_after_test(void);
 
 int               win_w = 320;
 int               win_h = 320;
@@ -49,7 +50,7 @@ time_test(char *description, void (*func) (void))
    printf("Test: %s\n", description);
    t1 = get_time();
    for (i = 0; i < REPS; i++) func();
-   XSync(disp, False);
+   sync_after_test();
    t2 = get_time();
    t = t2 - t1;
    printf("Time: %3.3f sec.\n", t);
@@ -185,6 +186,27 @@ Xrender_Surf *surf_img = NULL;
 
 Imlib_Image   im_win = NULL;
 Imlib_Image   im_img = NULL;
+
+void
+touch_drawable(Display *disp, Drawable draw)
+{
+   XImage *image = image = XGetImage(disp, draw, 0, 0, 1, 1, 0xffffffff, ZPixmap);
+   if (image)
+      XDestroyImage(image);
+}
+
+/*
+ * Try to read from all the surfaces in order to ensure that the
+ * rendering is done and all the pending operations finished for them.
+ */
+void
+sync_after_test()
+{
+   touch_drawable(disp, surf_win->draw);
+   touch_drawable(disp, surf_off->draw);
+   touch_drawable(disp, surf_img->draw);
+   XSync(disp, False);
+}
 
 void
 test_over_x(void)
